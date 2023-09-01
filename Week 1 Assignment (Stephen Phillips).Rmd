@@ -1,0 +1,66 @@
+---
+title: "Data 607 Week 1 Assignment"
+author: "Steve Phillips"
+date: "2023-09-01"
+output: html_document
+---
+## Introduction:
+Congress is the oldest that it has ever been. This can be explained by an aging general population and a high senior voter turnout. The bulk of congress is currently made up of baby boomers, with 48% of congress being represented by them. In 2001, the median age of booomers in office was 49. Today their median age is 66. This is concerning, as older politicians may not have experience with issues regarding technology, or things that are important to younger Americans, such as climate change.
+
+The article can be accessed here: https://fivethirtyeight.com/features/aging-congress-boomers/
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(readr)
+library(tidyverse)
+```
+## Load Data
+
+First the raw data must be retrieved from the github repo and read.
+```{r}
+data <- read_csv("https://raw.githubusercontent.com/sphill12/DATA607/main/Congress_Age_Data.csv")
+```
+## Subsetting the Data
+Several columns were not all that pertinent to how I would be analyzing this dataset. I opted to remove the names of the politicians, and their bioguide ID (number attached to each politician), as well as the cmltv_chamber (provides a distiction between years spent in the house and senate), and the age in days of the politicians.
+
+Most of the column names were self explanatory, but I changed the "cmltv_cong" column to be slightly more readable as "congresses_served" and "state_abbrev" to "state_abbreviation".
+
+```{r}
+final_data <- data[,c("congress","start_date","chamber","state_abbrev","cmltv_cong", "age_years","generation")]
+```
+```{r}
+final_data <- final_data %>% rename("congresses_served" = "cmltv_cong","state_abbreviation" = "state_abbrev",)
+```
+```{r}
+final_data
+```
+```{r}
+glimpse(final_data)
+```
+## Exploratory Analysis Example
+
+I wanted to show what some exploratory analysis that I would potentially do on this dataset would look like. First I subsetted my dataset to be from 2000 onward, as I think this more interesting and relevant than the entire history. Next, I grouped by state, and calculated the mean age of politicians for these groupings.
+
+I put this data into a bar plot, for easy trend identification. If I was doing a more in depth analysis, I would determine the most recent/most popular political party of each of the states and assign the bar colors based on this.
+
+```{r}
+state_data <-subset(final_data, start_date >= "2000-01-01") %>% group_by(state_abbreviation) %>% summarise(age = mean(age_years))
+
+```
+```{r}
+ggplot(data = state_data, aes(x = state_abbreviation, y = age)) + geom_bar(stat = "identity", aes(fill = "red")) + theme(axis.text.x = element_text(angle = 90,hjust = 1, vjust = 0.3),legend.position = "none") + ggtitle("Average Politician Age Per State since 2000") + xlab("State") + ylab("Age") 
+```
+
+
+
+## Conclusion:
+The article provided a good summary of general age trends in congress over time, but there are other details that could be explored. There was no mention of age differences across party lines, or if certain states had older average politicians. It would be interesting to see if the democratic party which generally favors younger people had a younger average politician age. As an example of exploratory analysis that could be done, I plotted the average age of politicians for each state, since the year 2000.
+
+## Links:
+Github repository:
+https://github.com/sphill12/DATA607
+
+
+
+
