@@ -1,0 +1,31 @@
+---
+title: "DATA 607 Assignment 2"
+author: "Steve Phillips"
+date: "2023-09-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Loading Necessary Libraries
+I decided to connect to an SQL server directly for my project. The ODBC library allows for connecting to an SQL database, while the rstudioapi library allows for me to place a prompt for the password when someone tries to connect to it.
+```{r}
+library("odbc")
+library("rstudioapi")
+```
+## Connecting
+By selecting "new connection" in rstudio, I was able to retrieve the driver connection syntax, "odbc::odbc(), .connection_string = "Driver={MySQL ODBC 8.1 Unicode Driver};", to form the connection with the sql server.
+```{r}
+con <- dbConnect(odbc::odbc(), .connection_string = "Driver={MySQL ODBC 8.1 Unicode Driver};", Server = "localhost", Database = "week_2_assignment", UID = "root", PWD = rstudioapi::askForPassword("Database Password"), Port = 3306)
+```
+## Load Data
+I queried all of the data and stored it into a dataframe. To deal with the movies that people hadn't watched, I simply set it to Null in SQL, which will return an NA value when loaded into an R dataframe.
+```{r}
+df <- dbGetQuery(con, "SELECT * FROM movies")
+df
+```
+
+
+
+
