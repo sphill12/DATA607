@@ -1,0 +1,76 @@
+---
+title: "Week 3 Assignment Data 607"
+author: "Steve Phillips"
+date: "2023-09-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(tidyverse)
+library(readr)
+```
+
+
+## Question 1
+
+```{r}
+data <- read.csv("https://raw.githubusercontent.com/sphill12/DATA607/main/majors-list%20data%20607.csv")
+```
+```{r}
+major_filtered <- data %>% filter(str_detect(Major, regex("STATISTICS|DATA")))
+major_filtered
+```
+## Question 2
+
+```{r}
+raw_str <- r"([1] "bell pepper"  "bilberry"     "blackberry"   "blood orange"
+[5] "blueberry"    "cantaloupe"   "chili pepper" "cloudberry"  
+[9] "elderberry"   "lime"         "lychee"       "mulberry"    
+[13] "olive"        "salal berry")"
+```
+
+
+```{r}
+pattern <- '"([^"]+)"'
+find_match <- str_extract_all(raw_str, pattern)
+
+final <- lapply(find_match, function(x) substr(x, 2, nchar(x)-1))
+print(final)
+
+```
+
+## Question 3
+"(.)\1\1"
+This expression will take any character for "(.)". The "\1" will then match to the text of the first grouping, the "(.)". This would match strings such as "aaa"
+
+"(.)(.)\\2\\1"
+This expression will form 2 matching groups with "(.)(.)". It will then take a match with the second group followed by a match with the first group. This would match strings such as "abba"
+
+"(..)\1"
+This expression will take any two characters for the grouping. It will then match another set of this grouping. This would match a string such as "abab"
+
+"(.).\1.\1"
+
+This expression will take a grouping with the first char, and then allow any character to follow it. The next character must be the first grouping, followed by any character, and finally the first grouping. This would match a string such as "abaca"
+
+"(.)(.)(.).*\3\2\1*"
+
+This expression will make 3 groupings at "(.)(.)(.)".The .* will match 0 or more characters after the first 3. The string must then match the 3rd grouping, and the second grouping. The "\1*" will match 0 or more occurances of the 1st grouping.There are a variety of ways to match a string to this pattern. "abccb","abcabca","abccba" would all match
+
+## Question 4
+
+### Construct regular expressions to match words that:
+
+#### Start and end with the same character
+
+The following regex would do this "^(.).*\\1$"
+
+
+#### Contain a repeated pair of letters (e.g. "church" contains "ch" repeated twice.)
+The following regex would do this "(..).*\\1"
+
+#### Contain one letter repeated in at least three places (e.g. "eleven" contains three "e"s.)
+I was not able to get this one
