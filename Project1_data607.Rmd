@@ -1,0 +1,139 @@
+---
+title: "Project1 Data 607"
+author: "Steve Phillips"
+date: "2023-09-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Import the necesssary packages and the dataset
+```{r}
+library(readr)
+library(tidyverse)
+library(stringr)
+library(dplyr)
+project1data <- read_csv("https://raw.githubusercontent.com/sphill12/DATA607/main/project1data.txt")
+View(project1data)
+```
+## Remove rows that are just "---" and rename the column. Create a list of each data point, using the "|" symbol as a separator
+
+```{r}
+# remove rows that only contain dashes
+new_df = project1data %>% filter(row_number() %% 3 != 0)
+new_df = new_df %>% rename(data = 1)
+```
+```{r}
+lapply(new_df, function(x) str_extract(x, regex("|.*|")))
+```
+```{r}
+string_split <- strsplit(new_df$data, "|", fixed = TRUE)
+string_split
+```
+
+## Extract the names of each player. The names of players began at the 22nd data point, and were located at every 20th point, so it was simple to extract using seq function 
+```{r}
+reworked_df <-data.frame(strings = unlist(string_split))
+reworked_df
+names <- (reworked_df[seq(22,nrow(reworked_df), 20), ])
+```
+```{r}
+names
+```
+## Same idea for the states, just beginning at the 31st data point
+```{r}
+state <- (reworked_df[seq(31,nrow(reworked_df), 20), ])
+state
+```
+
+```{r}
+total_points <-  (reworked_df[seq(23,nrow(reworked_df), 20), ])
+total_points
+```
+## In order to get the average pre rating of opponents I first decided to retrieve the reference number for the players opponents for each round. I then placed them all into their own data frame
+```{r}
+rd1 <- (reworked_df[seq(24, nrow(reworked_df), 20), ])
+rd2 <- (reworked_df[seq(25, nrow(reworked_df), 20), ])
+rd3 <- (reworked_df[seq(26, nrow(reworked_df), 20), ])
+rd4 <- (reworked_df[seq(27, nrow(reworked_df), 20), ])
+rd5 <- (reworked_df[seq(28, nrow(reworked_df), 20), ])
+rd6 <- (reworked_df[seq(29, nrow(reworked_df), 20), ])
+rd7 <- (reworked_df[seq(30, nrow(reworked_df), 20), ])
+all_rds <- data.frame(rd1 = rd1, rd2 = rd2, rd3 = rd3, rd4 = rd4,rd5 = rd5, rd6 = rd6, rd7 = rd7)
+all_rds <- as.data.frame(lapply(all_rds, function(x) gsub("W|D|L|H|U|X|B", "", x)))
+all_rds <- transform(all_rds, rd1 = as.numeric(rd1),rd2 = as.numeric(rd2),rd3 = as.numeric(rd3),rd4 = as.numeric(rd4),rd5 = as.numeric(rd5),rd6 = as.numeric(rd6),rd7 = as.numeric(rd7))
+all_rds
+
+```
+## The data wasn't clean for row containing the rating of the players, so some additional transformations were needed
+```{r}
+pre_rating <- (reworked_df[seq(32, nrow(reworked_df), 20), ])
+pre_rating
+```
+## A regex was used to match 3 or 4 digits. Because some ratings were followed by a "P" I needed an or statement for the ending of the pattern
+```{r}
+pattern <- " \\d\\d\\d\\d?( |P)"
+pre_rating_final <- lapply(pre_rating, function(x) str_extract(x, pattern))
+```
+```{r}
+pre_rating_final
+```
+
+## Next I removed the "P" from the end of the data and stripped the spaces on either side of the numbers.
+
+```{r}
+pre_rating_final <- unlist(pre_rating_final)
+pre_rating_final <- lapply(pre_rating_final, function(x) str_trim(x, "both"))
+pre_rating_final <- lapply(pre_rating_final, function(x) gsub("P","", x))
+pre_rating_final <-unlist(pre_rating_final)
+```
+## I made a new data frame, and added the important data that I had collected so far. I converted the necessary columns into integer values.
+```{r}
+final <-data.frame(names = names, state = state, total_points = total_points, pre_rating = pre_rating_final)
+final$index <- 1:nrow(final)
+final <- final %>% relocate(index, .before = names)
+final <- transform(final, total_points = as.numeric(total_points), pre_rating = as.numeric(pre_rating))
+final
+
+```
+
+```{r}
+
+all_rds
+
+
+```
+
+
+```{r}
+rd1_pre_rating
+```
+## I used the data frame with the opponent references to make a new data frame containing the pre rating of all the opponents for each round.
+```{r}
+rds_pre_rating <-data.frame(rd1_rating = final[c(all_rds$rd1),]$pre_rating, rd2_rating = final[c(all_rds$rd2),]$pre_rating, rd3_rating = final[c(all_rds$rd3),]$pre_rating, rd4_rating = final[c(all_rds$rd4),]$pre_rating, rd5_rating = final[c(all_rds$rd5),]$pre_rating, rd6_rating = final[c(all_rds$rd6),]$pre_rating, rd7_rating = final[c(all_rds$rd7),]$pre_rating)
+rds_pre_rating
+```
+## I took the mean of the values from each row and added it as a column to this data frame, being sure to ignore the NA values that were present.
+```{r}
+rds_pre_rating <- rds_pre_rating %>% rowwise() %>% mutate(mean = mean(c(rd1_rating,rd2_rating,rd3_rating,rd4_rating,rd5_rating,rd6_rating,rd7_rating), na.rm = TRUE))
+rds_pre_rating$mean <- round(rds_pre_rating$mean, 0) 
+rds_pre_rating
+```
+## I then added this to my final data frame, and reomved the index column as I realized it wasn't needed. This is all of the data that was required for the assignment.
+
+```{r}
+final$average_opponent_pre_rating <- rds_pre_rating$mean
+final <- final[-c(1)]
+final
+```
+## I then wrote my data set to a csv. This would need to be changed to the loction on your computer in which you want to write to
+```{r}
+write.csv(final,"C:\\Users\\Steve\\Documents\\Masters Program\\project3_final_data.csv")
+```
+
+
+
+
+
+
