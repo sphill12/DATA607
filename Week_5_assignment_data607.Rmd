@@ -1,0 +1,108 @@
+---
+title: "Week_5_data607"
+author: "Steve Phillips"
+date: "2023-09-25"
+output: html_document
+---
+## Import the Necessary Libraries and Import the Data
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(readr)
+df <- read_csv("https://raw.githubusercontent.com/sphill12/DATA607/main/Week_5_data_607.csv")
+```
+```{r}
+head(df)
+```
+
+## First I added column names that were missing from the data. Because I wanted to shift the data to be long rather than wide, I had to input values to make the data more descriptive
+```{r}
+colnames(df)[1:2] <- c("airline", "delay")
+df$airline[2] <- "ALASKA"
+df$airline[5] <- "AM WEST"
+df <- df %>% drop_na()
+```
+## Rather than have a column for each location, I made all locations into one column, and added a "total" column to display the values that were in each column.
+```{r}
+longer_df <- pivot_longer(df, cols = 3:7, names_to = "Location", values_to = "total")
+head(longer_df)
+```
+
+
+## For visualizations, I first displayed the difference in total delays and on times between the two airlines
+```{r}
+airline_group <- data.frame(longer_df %>% group_by(airline, delay) %>% summarize(total = sum(total)))
+airline_group
+ggplot(data = airline_group, aes(x = airline, y = total, fill = delay)) + 
+  geom_bar(stat = "identity", position = position_dodge()) +
+  geom_text(aes(label= airline_group$total), position=position_dodge(width=0.9), vjust=-0.25)
+airline_number <- airline_group[airline_group$total == "delayed"]
+```
+
+
+## I wanted to show the ratio of delays to on time counts. Alaska has a higher proportion of delays.
+```{r}
+airline_group %>%
+  group_by(airline) %>%
+  summarise(delayed_to_ontime_ratio = sum(total[delay == "delayed"]) / sum(total[delay == "on time"]))
+```
+
+
+
+
+```{r}
+airline_number <- airline_group$total[airline_group$delay == "delayed"] / airline_group$total[airline_group$delay == "on time"]
+airline_number
+```
+
+## Here I showed the delays and on times for each location. We can see that Pheonix contains much more traffic than other locations. Overall San Fransisco appears to be the worst location to have flights, as the delays are quite high compared to on time flights.
+
+
+
+```{r}
+location_group <- data.frame(longer_df %>% group_by(Location, delay) %>% summarise(total = sum(total)))
+ggplot(data = location_group, aes(x = Location, y = total, fill = delay)) + 
+  geom_bar(stat = "identity", position = position_dodge()) +
+  geom_text(aes(label=total), position=position_dodge(width=0.9), vjust=-0.25)
+location_group
+```
+
+## I separated the data into two plots for locations. One that shows the delays, and one that shows the on time for each airline. We can see that Pheonix is a hot area for AM west, while Seattle is a hot area for Alaska.
+
+```{r}
+delayed = longer_df %>% filter(delay == "delayed")
+ggplot(data = delayed, aes(x = Location, y = total, fill = airline)) + 
+  geom_bar(stat = "identity", position = position_dodge()) +
+  geom_text(aes(label=total), position=position_dodge(width=0.9), vjust=-0.25)
+
+```
+
+```{r}
+on_time = longer_df %>% filter(delay == "on time")
+ggplot(data = on_time, aes(x = Location, y = total, fill = airline)) + 
+  geom_bar(stat = "identity", position = position_dodge()) +
+  geom_text(aes(label=total), position=position_dodge(width=0.9), vjust=-0.25)
+```
+```{r}
+ location_ratios <- data.frame(longer_df %>%
+  group_by(Location, airline) %>%
+  summarise(delayed_to_ontime_ratio = (sum(total[delay == "delayed"]) / sum(total[delay == "on time"]))))
+```
+
+
+
+## I felt that showing the ratio of delays to on times was more representative of airline quality. Here are the delay ratios for each place. We can see that Alaska performs better in each place. Overall, it is better to fly Alaska.
+```{r}
+location_ratios
+```
+```{r}
+ggplot(location_ratios, aes(x = Location, y = delayed_to_ontime_ratio, fill = airline)) + geom_bar(stat = "identity", position = position_dodge())
+```
+
+
+
+
