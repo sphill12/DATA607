@@ -1,0 +1,323 @@
+---
+title: "Project 2 Data 607"
+author: "Steve Phillips"
+date: "2023-10-02"
+output:
+  html_document: default
+  pdf_document: default
+---
+# Dataset 1
+## Read the necessary libraries in and the first dataset that is going to be tidied
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(readr)
+library(tidyverse)
+library(tidyr)
+library(dplyr)
+library(ggcorrplot)
+library(ggplot2)
+df1 <- read_csv("https://raw.githubusercontent.com/sphill12/DATA607/main/Movie%20dataset%20data%20607.csv")
+```
+```{r}
+#remove scientific notation from plots
+options(scipen = 999)
+```
+
+
+## Determine what columns contain too many NA values to be useful. Gross income contains too many missing values to be useful
+```{r}
+na_val <- colSums(is.na(df1))
+na_val
+```
+```{r}
+df1 <- subset(df1, select = -c(Gross))
+head(df1)
+```
+## Next, the column containing years needs to be cleaned up. I separated it from the rest of the dataframe for my convenience. First I used a regex and the grepl function to determine what shows were still being produced (as of the creation of this dataset). I noticed that the shows still in production had the format "DDDD- ", so this was my pattern. Next I selected a pattern that would remove anything that isn't an integer, so that I could parse the start and end date of movies/shows.
+```{r}
+year <- df1$YEAR
+```
+
+```{r}
+year <- as.data.frame(year)
+pattern <- "\\d\\d\\d\\d[[:punct:]] "
+still_in_production = grepl(pattern, year$year)
+year <- as.data.frame(lapply(year, function(x) gsub("[^0-9]", "", x)))
+year <- pivot_longer(year, cols = colnames(year),  values_to = "year")
+year$still_in_production <- still_in_production
+``` 
+
+## To get the start date, I selected the first 4 digits of the column, and then the following 4 digits for the end date
+```{r}
+year$start <- substr(year$year,1,4)
+year$end <- substr(year$year, 5,8)
+year <- year %>% transform(start = as.numeric(start), end = as.numeric(end))
+head(year)
+```
+```{r}
+df1 <- subset(df1, select = -c(YEAR))
+```
+```{r}
+df1 <- df1 %>% mutate(starting_year = year$start, ending_year = year$end, still_in_production = year$still_in_production)
+df1 <- df1 %>% transform(starting_year = as.numeric(starting_year), ending_year = as.numeric(ending_year))
+```
+## I noticed that when the dataset was webscraped, the "\\\\n" was leftover for all of the columns containing string values. I removed this, as well as any other erraneous text that I could find.
+```{r}
+df1$GENRE <- gsub("\n", "", df1$GENRE)
+df1$ONE.LINE <- gsub("\n", "", df1$ONE.LINE)
+df1$STARS <- gsub("\n", "", df1$STARS)
+df1$STARS <- gsub("Stars:","", df1$STARS)
+df1$STARS <- gsub("Director:","", df1$STARS)
+df1$STARS <- gsub("\\|", "", df1$STARS)
+
+```
+## I created a correlation matrix for all of the numerical values to see if any obvious trends are present.
+```{r}
+
+df1_numeric <-df1 %>% select(where(is.numeric))
+df1_numeric_filt <- df1_numeric %>% drop_na()
+df1_numeric_filt <- subset(df1_numeric_filt, select = -c(ending_year))
+head(df1_numeric_filt)
+```
+## We can see that no correlation appears to be present
+```{r}
+corr <- round(cor(df1_numeric_filt),3)
+ggcorrplot(corr, 
+           hc.order = TRUE, 
+           type = "lower", 
+           lab= TRUE, 
+           lab_size = 3, 
+           method = "circle", 
+           colors = c("tomato2", "white", "springgreen3"), 
+           title = "Corellation of Numerical Data in Movies/Shows Dataset", 
+           ggtheme = theme_bw)
+```
+
+
+## One suggested analysis for this dataset was to see if a relationship between run time and rating exists.
+```{r}
+ggplot(df1, aes(x = RunTime, y = RATING)) + geom_point() + ggtitle('Impact of Run Time on Rating') + xlab("Run Time") + ylab("Rating")
+```
+
+
+## It looks like generally run time doesn't impact the rating of a movie. Those with run times above 200 minutes tend to be above 5 stars though.
+
+# Dataset 2
+```{r}
+df2 <- read_csv("https://raw.githubusercontent.com/sphill12/DATA607/main/world_population_data_607_project2.csv")
+```
+```{r}
+head(df2)
+```
+## It appears that no NA values are present in this dataset
+```{r}
+colSums(is.na(df2))
+```
+
+```{r}
+longer_df2 <- df2 %>% pivot_longer(cols = 6:13, names_to = "year", values_to = "population")
+longer_df2$year <- substr(longer_df2$year, 1,4)
+colnames(longer_df2)[6:8] <- c("area", "density", "growth_rate")
+
+```
+```{r}
+head(longer_df2)
+```
+
+```{r}
+continents <- longer_df2 %>% group_by(Continent) %>% filter(year == 2022) %>% summarise(avg_pop = mean(population), avg_density = mean(density), avg_growth = mean(growth_rate))
+continents
+```
+
+## Asia is the most populated by a good amount
+```{r}
+ggplot(data = continents, aes(x = Continent, y = avg_pop)) + geom_bar(stat = "identity") + ggtitle("Continental Population For 2022") + ylab("Average Population")
+```
+## Asia is also the most dense continent
+```{r}
+ggplot(data = continents, aes(x = Continent, y = avg_density)) + geom_bar(stat = "identity") + ggtitle("Continental Density For 2022") + ylab("Average Density")
+```
+
+```{r}
+ggplot(data = continents, aes(x = Continent, y = avg_growth)) + geom_bar(stat = "identity") + ggtitle("Continental Growth For 2022") + ylab("Average Growth") + coord_cartesian(ylim = c(1,1.1))
+```
+```{r}
+continents <- longer_df2 %>% group_by(Continent, year) %>% summarise(avg_pop = mean(population), avg_density = mean(density), avg_growth = mean(growth_rate))
+```
+## We can see that each  continent has had different population growth over the past 50 years. China has grown incredibly quickly and appears to be leveling out since 2010. South America has had almost a flat growth since 2010. North America and Europe have both had relatively similar populations. Africa appears to still be growing fast, and seems as though it will overtake South America eventually.It is worth noting that the data points are not spaced out evenly (2020 to 2022 is only 2 years, compared to the 10 year spacing between  1970 and 1980), so the data will be distorted
+
+```{r}
+ggplot(data = continents, aes(x = year, y = avg_pop, color = Continent)) + geom_point() + ggtitle("Average Continental Population from 1970 to 2022") + ylab("Average Population") + xlab("Year")
+```
+
+
+## Import dataset 3
+```{r}
+df3 <- read_csv("https://raw.githubusercontent.com/sphill12/DATA607/main/raw_anime_dataset_607.csv")
+```
+```{r}
+head(df3)
+```
+## This data set contains many values that are missing.
+```{r}
+colSums(is.na(df3))
+```
+
+
+## I wanted to see if i could extract the starting air date and show ending from a large string
+```{r}
+df3
+```
+## This pattern will look for the first date that it finds
+```{r}
+aired <- df3$aired
+
+```
+```{r}
+start_date_pattern <- "\\d\\d\\d\\d-\\d\\d-\\d\\d"
+start_date <- lapply(aired, function(x) str_extract(x, start_date_pattern))
+start_date <- as.data.frame(start_date)
+start_date <- data.frame(starting_date = unlist(start_date))
+
+```
+
+```{r}
+head(start_date)
+```
+
+## This regex contains a look behind that searches for "to': '" after which it takes the date in as a match
+```{r}
+
+end_date_pattern <- "(?<=to\\': \\')\\d\\d\\d\\d-\\d\\d-\\d\\d"
+end_date <- lapply(aired, function(x) str_extract(x, end_date_pattern))
+end_date <- as.data.frame(end_date)
+end_date <- data.frame(ending_date = unlist(end_date))
+```
+
+
+
+```{r}
+df3$starting_date <- start_date$starting_date
+df3$ending_date <- end_date$ending_date
+```
+```{r}
+head(df3)
+```
+
+
+## Many of the columns with strings within them were surrounded by brackets or other punctuation. I removed this from the columns.
+```{r}
+df3$producers <- gsub("[^[:alnum:], ]","", df3$producers)
+df3$title_synonyms <- gsub("[^[:alnum:], ()]", "", df3$title_synonyms)
+df3$genre <- gsub("[^[:alnum:], ]","",df3$genre)
+df3$studio <- gsub("[^[:alnum:], .]", "", df3$studio)
+```
+```{r}
+head(df3,100)
+```
+## Although I cleaned a few of the columns containing text, I realized that some of them were pretty useless to data analysis and ended up removing them.
+```{r}
+df3 <- subset(df3, select = -c(related, title_japanese, title_synonyms, synopsis, background))
+```
+```{r}
+colSums(is.na(df3))
+```
+## The poster of this data set did not specify any analysis that they would like done. I personally would like to look at whether year or season influences metrics such as rank and popularity
+
+```{r}
+## look at correlation
+df3_numeric <-df3 %>% select(where(is.numeric))
+df3_numeric <- df3_numeric %>% drop_na()
+
+corr_df3 <- round(cor(df3_numeric),3)
+head(corr_df3)
+head(df3_numeric, 100)
+```
+## Before looking at seasonal and yearly trends I decided to see if any interesting correlation was present between the numerical data
+```{r}
+corr_df3 <- round(cor(df3_numeric),3)
+ggcorrplot(corr_df3, 
+           hc.order = TRUE, 
+           type = "lower", 
+           lab= TRUE, 
+           lab_size = 3, 
+           method = "circle", colors = c("tomato2", "white", "springgreen3"), 
+           title = "Corellation of Numerical Data in Anime Data Set", 
+           ggtheme = theme_bw)
+```
+
+## Most of the correlations found make sense. The score of an anime is correlated with the amounts of favorites and people that have scored it. The lower the rank of an anime the better it is, so the inverse correlation is to be expected.
+
+```{r}
+df3 <-  df3 %>% separate(premiered, into = c("season_premiered","year_premiered"), sep = " ")
+```
+
+```{r}
+head(df3)
+```
+
+
+```{r}
+seasonality <- df3  %>% 
+                group_by(season_premiered) %>% 
+                summarise(avg_score = mean(score, na.rm = TRUE), avg_popuarity = mean(popularity, na.rm = TRUE), avg_favorites = mean(favorites, na.rm = TRUE))
+head(seasonality)
+```
+```{r}
+ggplot(data = seasonality, aes(x = season_premiered, y= avg_score)) + geom_bar(stat = "identity") + ggtitle("Impact of Season Premiered on Average Score") + xlab("Season") + ylab("Average Score")
+```
+
+## Season doesn't noticeably impact the average score
+
+```{r}
+ggplot(data = seasonality, aes(x = season_premiered, y= avg_favorites)) + geom_bar(stat = "identity") + ggtitle("Impact of Season Premiered on Average Favorites") + xlab("Season") + ylab("Average Favorites")
+```
+
+## It seems that shows premiering in the fall tend to have more average favorites. 
+
+```{r}
+yearly_trends <- df3 %>% group_by(year_premiered) %>% summarize(avg_score = mean(score, na.rm = TRUE), avg_popuarity = mean(popularity, na.rm = TRUE), avg_favorites = mean(favorites, na.rm = TRUE))
+```
+
+## We can see that the average score per year trends upwards until 2010, where it seems to drop off. THis would be something that is interesting to investigate further
+
+```{r}
+ggplot(data = yearly_trends, aes(x = year_premiered, y = avg_score)) + geom_point() + ggtitle("Average Anime Rating throughout Time") + xlab("Year Premiered") + ylab("Average Score") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+```
+
+## I wanted to see how the ratings look when all data is included for every year. We can see that the ratings spread gets larger from 2000 onwards, while it is relatively tight before this.
+
+```{r}
+ggplot(data = df3,aes(x = year_premiered, score)) + geom_point() + ggtitle("Anime Ratings Accross Time") + xlab("Year Premiered") + ylab("Score") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+```
+
+## This is the extent of the analysis that I will do, as none was requested. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
