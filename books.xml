@@ -1,0 +1,27 @@
+<books>
+	<book>
+		<Book_Name>Book Name</Book_Name>
+		<Authors>Authors</Authors>
+		<Attribute_One>Attribute One</Attribute_One>
+		<Attribute_Two>Attribute Two</Attribute_Two>
+		<Attribute_Three>Attribute Three</Attribute_Three>
+    </book>
+	<book>
+		<Book_Name>Kitchen Confidential</Book_Name>
+		<Authors>Anthony Bourdain</Authors>
+		<Attribute_One>Anthony Bourdain advises to never order fish on a monday from a restaurant, as this will likely be product that wasn't sold on the weekend and is about to spoil.</Attribute_One>
+        <Attribute_Two>Be careful when ordering well done meals, chefs often save the worst cuts of meat to give to those that order it as it is harder to tell in this case.</Attribute_Two>
+    </book>
+    <book>
+        <Book_Name>The Way of Kings</Book_Name>
+        <Authors>Brandon Sanderson</Authors>
+        <Attribute_One>Brandon Sanderson often weaves multiple independant story lines together in his books, which come together at the end.</Attribute_One>
+        <Attribute_Two>The world building is one of my favorite things about the books, with an interesting magic system and creatures unique to the world.</Attribute_Two>
+    </book>
+    <book>
+        <Book_Name>R for Data Science</Book_Name>
+        <Authors>Hadley Wickham, Mine Cetinkaya-Rundel, Garrett Grolemund</Authors>
+        <Attribute_One>The chapter on tidy data helped me to understand it. The characteristics of tidy data are that each variable is a column, each observation is a row, and each value is a cell.</Attribute_One>
+        <Attribute_Two>When webscraping, it is important to consider the ethics of what you are doing. Data that is public, non-personal, and factual is generally ok to use.</Attribute_Two>
+    </book>
+</books>
