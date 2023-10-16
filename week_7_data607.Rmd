@@ -1,0 +1,63 @@
+---
+title: "Data 607 Import XML, JSON, HTML"
+author: "Steve Phillips"
+date: "2023-10-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+##XML,xml12, rjson, and jsonlite will all be used to parse our documents
+library(xml2)
+library(tidyverse)
+library(XML)
+library(rjson)
+library(jsonlite)
+library(readr)
+library(RCurl)
+```
+## The xml file was difficult to parse cleanly as a dataframe, so I sliced each column from the parsed XML and formed a dataframe from this.
+
+```{r}
+
+data_xml = read_xml("https://raw.githubusercontent.com/sphill12/DATA607/main/books.xml")
+xml_book <- xml_text(xml_find_all(data_xml, ".//Book_Name"))
+xml_author <- xml_text(xml_find_all(data_xml, ".//Authors"))
+xml_atr_1 <- xml_text(xml_find_all(data_xml, ".//Attribute_One"))
+xml_atr_2 <- xml_text(xml_find_all(data_xml, ".//Attribute_Two"))
+df_xml <- tibble(book = xml_book, author = xml_author, attribute_1 = xml_atr_1, attribute_2 = xml_atr_2)
+df_xml = df_xml[-1,]
+```
+
+```{r}
+df_xml
+```
+
+
+## The html document was much cleaner compared to the xml, and only required that the column names be added to the document.
+```{r}
+data_html <- getURL("https://raw.githubusercontent.com/sphill12/DATA607/main/books.html")
+df_html <- readHTMLTable(data_html, as_html = TRUE, as.data.frame = TRUE)
+df_html <- as.data.frame(df_html)
+colnames(df_html) <- c("Book Name", "Authors", "Attribute One", "Attribute Two")
+df_html
+```
+## The json document also cleanly was made into a dataframe. Once again, only column names were added before the dataset was satisfactory.
+```{r}
+data_json <- jsonlite::fromJSON("https://raw.githubusercontent.com/sphill12/DATA607/main/books.json")
+df_json <- as.data.frame(data_json)
+```
+```{r}
+colnames(df_json) <- c("Book Name", "Authors", "Attribute One", "Attribute Two")
+df_json
+```
+
+
+
+
+
+
+
