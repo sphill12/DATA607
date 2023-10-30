@@ -1,0 +1,39 @@
+---
+title: "Data 607  Week 9"
+author: "Steve Phillips"
+date: "2023-10-29"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+##First the necesary packages must be loaded
+```{r}
+##Load in necessary packages
+library(readr)
+library(tidyverse)
+library(dplyr)
+library(jsonlite)
+```
+## For security, the api code is something that must be entered
+```{r}
+key <- rstudioapi::askForPassword("Authorization Key")
+```
+## The query here will give the most popular articles based on the ones that are being emailed. The 7 in the query indicates that the time period is one week.
+```{r}
+api_url <- "https://api.nytimes.com/svc/mostpopular/v2/emailed/7.json?api-key="
+```
+## Stitch together the query and the API Key
+```{r}
+api_path <- paste(api_url, key, sep = "")
+```
+## Have the end result return a dataframe
+```{r}
+df<- as.data.frame(fromJSON(api_path))
+```
+
+```{r}
+df
+```
+
