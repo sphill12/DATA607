@@ -1,0 +1,48 @@
+---
+title: "Recommender Systems - Data 607"
+author: "Steve Phillips"
+date: "2023-11-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Facebook's Recommender System Analysis
+
+## Scenario Design Analysis
+
+### Organization:
+
+1. Who are the target users?
+  - Facebook targets users that are looking to connect with people online, whether it is relatives, close friends, someone that you have met in a bar, etc.
+
+2. What are their key goals?
+  - Facebook wants to maintain engagement for its users, ensuring that they spend the most time possible on their platform, while also giving them ads which are personalized towards the interests of the user.
+  
+3. How can you help them accomplish their goals?
+  - Facebook can accomplish their goals by improving the relevancy of images that are shown on a facebook feed. For example, If someone's profile shows that they enjoy animals, having a feed that includes more media containing animals will hold their attention longer and cause them to view more ads. To increase ad relevancy, it would be necessary to make ads more persalized. One way to accomplish this would be to allow users to opt into a survey which provides facebook with more information on what the user is looking for in their ads, so that they are as personalized as possible.
+
+## Reverse engineering the Facebook Site:
+
+Facebook ad targeting is based on 3 different types of audiences:
+
+  1.Core audiences: This is when targeting is based on certain demographics, behaviors or location.
+  
+  2. Custom Audiences: This is when data shows that someone has already interacted with a business, so ads are shown for the business.
+  
+  3. Lookalike Audiences: This is when a user has a similar profile to another user that has shopped at a business, so an ad for that business is shown.
+
+Overall, most ad targeting is determined by the "profile" that facebook builds off of the user, with the information that they are given. This means looking at where you live, what you like and post on facebook, what websites you have visited, and even credit card information.
+
+
+## Recomendations for Improvement:
+
+I think that facebook ad recommendations could be improved by simply providing transparency to the users in how the recommendations are generated for them. It is often thought that devices are "listening" to what people are talking about, helping them to provide scarily accurate recommendations to users. The truth is that they just have enough data to build a reasonably accurate profile on their users. As mentioned before, another way to improve ad recommendations would be to allow users to opt into a survey, which would ask them key questions to figure out their ad preferences. This would also make people less wary about how accurate the ads are. The final way I would improve recommendations would be through increasing the selectivity of ads that they allow to be shown. Removing political ads would most likely improve the user experience, and it would help them to avoid situations such as the Cambridge Analytica scandal, which greatly harmed Facebook's reputation.
+
+## Sites Used for information:
+
+https://www.cnbc.com/2018/03/19/how-facebook-ad-tracking-and-targeting-works.html
+https://blog.hootsuite.com/facebook-targeting/#:~:text=On%20Facebook%2C%20ad%20targeting%20is,already%20interacted%20with%20your%20business.
+
