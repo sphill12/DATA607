@@ -1,0 +1,448 @@
+---
+title: "data_607_final_project_stephen_phillips"
+author: "Steve Phillips"
+date: "2023-12-09"
+output: html_document
+---
+## Goals:
+
+### Identify areas of the world that are particularly impacted by diabetes
+### Create a Machine learning model that could potentially be generalized to the general population, to detect diabetes early based on common tests
+### Determine what variables are the most useful in the detection of diabetes
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Load Packages
+```{r}
+library(tidyr)
+library(lubridate)
+library(readr)
+library(tidyverse)
+library(randomForest)
+library(reshape2)
+library(countrycode)
+library(superml)
+library(corrplot)
+library(caTools)
+library(dplyr)
+set.seed(123)
+```
+## The data
+
+Data for the machine learning model was gathered from kaggle (https://www.kaggle.com/datasets/aravindpcoder/diabetes-dataset). This data was sourced by the Iraqi society from the Medical City Hospital, and the Center for Endocrinology and Diabetes-Al-Kindy Teaching Hospital. The map data was sourced from https://ourworldindata.org/grapher/death-rate-from-diabetes, and they aquired the dataset from the International Diabetes Federation.
+
+## Load Data
+```{r}
+db_predictors <- read_csv("https://raw.githubusercontent.com/sphill12/data607_final_project/main/Dataset%20of%20Diabetes_ml.csv")
+db_map <- read_csv("https://raw.githubusercontent.com/sphill12/data607_final_project/main/diabetes-prevalence_map.csv")
+```
+## Inspect Data
+```{r}
+summary(db_predictors)
+```
+```{r}
+str(db_predictors)
+```
+```{r}
+str(db_map)
+```
+
+
+## Look for missing values
+```{r}
+sapply(db_predictors,function(x) sum(is.na(x)))
+sapply(db_map,function(x) sum(is.na(x)))
+```
+
+## Missing data is only present in our mapping data 
+
+```{r}
+missing_val <- db_map %>% 
+  filter(is.na(Code) == TRUE)
+```
+## The data that didn't contain a code is actually diabetes information on different regions in the world
+```{r}
+missing_val %>% arrange(desc(`Diabetes prevalence (% of population ages 20 to 79)`))
+```
+
+## The data with missing codes is information on types of places, such as low income or high income regions. Potentially useful, so I will keep it in a separate dataframe and remove it from the original
+
+```{r}
+db_map <- db_map %>% filter(is.na(Code) == FALSE)
+sapply(db_map,function(x) sum(is.na(x)))
+```
+## Now there are 0 missing values from both of our datasets. Next I will reformat some column names.
+
+```{r}
+colnames(db_predictors) <- c("id", "num_patient", "gender", "age", "urea", "creatinine_ratio", "hba1c" , "chol", "triglycerides", "hdl", "ldl",  "vldl", "bmi", "class")
+```
+```{r}
+colnames(db_map) <- c("country", "code", "year", "db_prevalence")
+```
+
+## The id number and patient number will not be useful, so they can be removed
+
+```{r}
+db_predictors <- subset(db_predictors, select = -c(id, num_patient))
+```
+
+## Visualize the data
+```{r}
+head(db_predictors)
+```
+
+```{r}
+ggplot(data = db_predictors, aes(x = gender)) + geom_bar()
+```
+```{r}
+ggplot(data = db_predictors, aes(x = class)) + geom_bar()
+db_predictors$gender <- gsub("f", "F", db_predictors$gender)
+```
+
+
+### About the data:
+
+gender: Diabetes is more common in men than women, so this may be a useful predictor
+
+Urea: A waste product that is excreted by kidneys. Urea is often higher in diabetes patients
+
+Creatinine ratio: Creatinine is a waste product in urine that comes from energy-producing processes in muscles. Higher creatinine is an indicator of diabetes
+
+hba1c: An HbA1c test is a blood test that shows average blood sugar levels over the previous 3 months. A high blood sugar level is a good indicator of diabetes, and this test is normally used to screen for it
+
+cholesterol: Diabetes will often increase bad cholesterol levels (LDL cholesterol), while decreasing good cholesterol (hdl cholesterol) levels
+
+triglycerides: Triglycerides are a type of fat in the blood. High triglycerides are common in diabetes patients
+
+VLDL Test: Stands for very low density lipoprotein test. Lipoproteins are made up of cholesterol, triglycerides and proteins. They move these substances around the body. VLDL contain a high amount of triglycerides and are considered a bad cholesterol
+
+BMI: Body Mass Index. A higher BMI is associated with an increased probability of diabetes, especially if the individual is at obese levels
+
+## Use melt function to create a long data frame, where a histogram grid can then be extracted
+```{r}
+hist_grid_predictors <- melt(db_predictors[,(1:12)])
+head(hist_grid_predictors)
+```
+```{r}
+hist_grid_predictors1 <- melt(db_predictors[,c(2,3,12)])
+hist_grid_predictors2 <- melt(db_predictors[,c(4,5,12)])
+hist_grid_predictors3 <- melt(db_predictors[,c(6,7,12)])
+hist_grid_predictors4 <- melt(db_predictors[,c(8,9,12)])
+hist_grid_predictors5 <- melt(db_predictors[,c(10,11,12)])
+head(hist_grid_predictors1)
+```
+## Facet wrap is used to create a visualization that uses two or more plots
+```{r} 
+ggplot(hist_grid_predictors1, aes(x = value,color = hist_grid_predictors1$class)) + 
+facet_wrap(~variable, scales = "free_x") + geom_histogram(fill = "white")
+```
+```{r}
+ggplot(hist_grid_predictors2, aes(x = value,color = hist_grid_predictors2$class)) + 
+facet_wrap(~variable, scales = "free_x") + geom_histogram(fill = "white")
+```
+```{r}
+ggplot(hist_grid_predictors3, aes(x = value,color = hist_grid_predictors3$class)) + 
+facet_wrap(~variable, scales = "free_x") + geom_histogram(fill = "white")
+```
+```{r}
+ggplot(hist_grid_predictors4, aes(x = value,color = hist_grid_predictors3$class)) + 
+facet_wrap(~variable, scales = "free_x") + geom_histogram(fill = "white")
+```
+```{r}
+ggplot(hist_grid_predictors5, aes(x = value,color = hist_grid_predictors3$class)) + 
+facet_wrap(~variable, scales = "free_x") + geom_histogram(fill = "white")
+```
+
+```{r}
+ggplot(hist_grid_predictors1, aes(x = value,color = hist_grid_predictors3$class)) + 
+facet_wrap(~variable, scales = "free_x") + geom_boxplot(fill = "white")
+```
+```{r}
+ggplot(hist_grid_predictors2, aes(x = value,color = hist_grid_predictors3$class)) + 
+facet_wrap(~variable, scales = "free_x") + geom_boxplot(fill = "white")
+```
+```{r}
+ggplot(hist_grid_predictors3, aes(x = value,color = hist_grid_predictors3$class)) + 
+facet_wrap(~variable, scales = "free_x") + geom_boxplot(fill = "white")
+```
+```{r}
+ggplot(hist_grid_predictors4, aes(x = value,color = hist_grid_predictors3$class)) + 
+facet_wrap(~variable, scales = "free_x") + geom_boxplot(fill = "white")
+```
+```{r}
+ggplot(hist_grid_predictors5, aes(x = value,color = hist_grid_predictors3$class)) + 
+facet_wrap(~variable, scales = "free_x") + geom_boxplot(fill = "white")
+```
+
+```{r}
+db_map %>%
+  ggplot(aes(x = db_prevalence)) + 
+    geom_histogram(fill = "white", col = I("blue"))
+```
+```{r}
+db_map %>% 
+  ggplot(aes(y = db_prevalence)) +  geom_boxplot()
+```
+
+## Are any of our machine learning variables highly correleated with eachother? 
+```{r}
+corrplot(cor(db_predictors[,2:11]), method = "color", order = "alphabet")
+```
+
+## Look at data that stands out
+```{r}
+high_db <- db_map %>% 
+  filter(db_prevalence >20)
+high_db[order(high_db$db_prevalence, decreasing = TRUE),]
+```
+## What countries have low levels of diabetes?
+
+
+```{r}
+db_map %>% 
+  filter(year != 2000) %>% 
+  arrange(db_prevalence)
+```
+
+
+## Which countries have had the largest increases in diabetes over 10 years
+
+```{r}
+wide_db_map <- db_map %>%
+              filter(year != 2000) %>%
+              pivot_wider(names_from = year, values_from = c(db_prevalence))
+colnames(wide_db_map)[c(3,4)] <- c("year11", "year21")
+wide_db_map$percent_change <-wide_db_map$year21 - wide_db_map$year11
+```
+```{r}
+wide_db_map %>% filter(wide_db_map$percent_change > 5) %>% arrange(desc(percent_change))
+
+```
+## which countries have been the best at reducing diabetes rate
+
+```{r}
+wide_db_map %>% arrange(percent_change)
+```
+
+## In order to visualize the data on a world map, the names of the countries needed to be converted to a standard format.This was achieved using the countrycode function to create a new column based on the three letter country codes given by the dataset. After, some countries need to be manually added due to inconsistent naming.
+
+```{r}
+db_map21 <- db_map %>%
+  filter(year == 2021)
+country_names <- countrycode(db_map21$code, "iso3c", "country.name")
+head(country_names)
+db_map21 <- cbind(db_map21, map_country = country_names)
+db_map21$map_country <- gsub("United States", "USA", db_map21$map_country)
+db_map21$map_country <- gsub("Congo - Kinshasa", "Democratic Republic of the Congo", db_map21$map_country)
+db_map21$map_country <- gsub("Congo - Brazzaville", "Republic of Congo", db_map21$map_country)
+db_map21$map_country[db_map21$code == "CIV"] <- "Ivory Coast"
+db_map21$map_country[db_map21$code == "MMR"] <- "Myanmar"
+db_map21$map_country[db_map21$code == "CZE"] <- "Czech Republic"
+```
+
+## Visualize diabetes prevalence over the entire world
+
+```{r}
+world_map <- map_data("world")
+world_map <- subset(world_map, region != "Antarctica")
+ggplot(db_map21) +
+  geom_map(dat = world_map, map = world_map, aes(map_id = region,),
+  fill = "white", color = "#7f7f7f", size = 0.25
+  ) +
+  geom_map(map = world_map, aes(map_id = db_map21$map_country, fill = db_map21$db_prevalence), size = 0.25) +
+  scale_fill_gradient(low = "white", high = "red", name = "diabetes") +
+  expand_limits(x = world_map$long, y = world_map$lat)
+           
+```
+```{r}
+db_map21 <- merge(x = db_map21, y = wide_db_map[,c("country", "percent_change")], by = "country")
+```
+## Next the change in diabetes prevalance over 10 years (2011-2021) was visualized for each country
+```{r}
+world_map2 <- map_data("world")
+world_map2 <- subset(world_map, region != "Antarctica")
+ggplot(db_map21) +
+  geom_map(dat = world_map, map = world_map, aes(map_id = region,),
+  fill = "white", color = "#7f7f7f", size = 0.25
+  ) +
+  geom_map(map = world_map, aes(map_id = db_map21$map_country, fill = db_map21$percent_change), size = 0.25) +
+  scale_fill_gradient2(low = "blue", high = "red",mid = "white", name = "diabetes") +
+  expand_limits(x = world_map$long, y = world_map$lat)
+    
+```
+
+
+## Machine learning:
+
+
+### Transform data to prep it for machine learning. The "predicted diabetic" or "P" class, was removed, as there was not that much data available. 
+
+```{r}
+ml_data <- db_predictors %>% filter(class != "P")
+```
+### There are about 100 negative diabetes datapoints and 850 diabetic data points
+```{r}
+ggplot(data = ml_data, aes(x = class)) + geom_bar()
+```
+### For the machine learning model to process the data, character values must be converted to a numeric format. 1's refer to datapoints with positive diabetes, and data from men
+```{r}
+ml_data$class <- ifelse(ml_data$class == "N",0,1)
+ml_data$gender <- ifelse(ml_data$gender == "F", 0, 1)
+
+```
+### Next, the data must be split between a training and test dataset. The sampling function was used to select for the datapoints going into each dataset
+```{r}
+split_index <- sample(2, nrow(ml_data), replace = T, prob = c(0.7, 0.3))
+split_index
+```
+
+
+```{r}
+train <- ml_data[split_index == 1,]
+test <- ml_data[split_index == 2,]
+```
+### The outcome variable must be a factor for the randomForest model to take it as an input
+
+important terms:
+
+mtry: The number of variables that are randomly sampled for each split. How many input features a decision tree has available at one time.
+
+ntree: The amount of decision trees that are used in total
+
+improve: The degree that the model has to improve for the process to keep running
+```{r}
+train$class <- as.factor(train$class)
+```
+```{r}
+tuneRF(train[-12], train$class, ntreeTry  = 2001, stepFactor = 1.5, improve = 0.01, trace = TRUE, plot = TRUE)
+```
+### Create the actual model using the randomForest function
+```{r}
+rf_model <- randomForest(class ~ ., data = train, ntree = 2001, replace= TRUE, mtry = 4, importance = TRUE)
+```
+### Plot the error of the model as trees increase
+```{r}
+plot(rf_model, ylim=c(0,0.36))
+legend('topright', colnames(rf_model$err.rate), col=1:3, fill=1:3)
+```
+### Extract the variable importance from our random forest model
+```{r}
+importance <- importance(rf_model)
+var_imporance <- data.frame(Variables = row.names(importance), importance = importance[,"MeanDecreaseGini"])
+var_importance <- var_imporance[order(-var_imporance$importance),]
+var_importance[,1:2]
+```
+### Look at what variables are most important to the model
+```{r}
+ggplot(var_imporance, aes(x = reorder(Variables, importance), y = importance, fill = importance)) + geom_bar(stat = "identity") + theme(axis.text.x =  element_text(angle = 22.5))
+
+```
+### hba1c is the most important term for evaluating whether or not a patient has diabetes.This makes sense as hba1c tests are used specifically to test for diabetes. Our model has a predicted error rate of 0.75%, with a higher rate of false positives than false negatives. Certain variables such as gender, creatinine ratio , hdl, urea, and ldl are extremely unimportant to the model
+```{r}
+rf_model
+```
+### When tested on our training dataset, the error is about what we would expect. 99.65% of predictions were correct when the model is run on our training data set.
+```{r}
+predicting1 <- data.frame(test$class, predict(rf_model, test))
+sum(predicting1$predict.rf_model..test. == predicting1$test.class, na.rm = T)/ nrow(predicting1) * 100
+```
+### What happens when our model is not allowed to train on a dataset with the hba1c testing to influence the predictions? It may be useful to have a model that can detect diabetes without the need of an hba1c test
+```{r}
+tuneRF(train[,c(1:4,6:11)], train$class, ntreeTry  = 2001, stepFactor = 1.5, improve = 0.01, trace = TRUE, plot = TRUE)
+```
+### The model accuracy in predicting those that dont have diabetes decreases without the addition of hba1c test
+
+```{r}
+model2 <- randomForest(class ~ ., data = train[,c(1:4,6:12)], ntree = 2001, replace= TRUE, mtry = 3, importance = TRUE)
+```
+```{r}
+plot(model2, ylim=c(0,0.36))
+legend('topright', colnames(rf_model$err.rate), col=1:3, fill=1:3)
+```
+### Our expected error rate is 2.26%
+```{r}
+model2
+```
+### The model performs better than expected on the training data, with  99.29% accuracy
+```{r}
+model_2_predict <- predict(model2, test)
+predicting2 <- data.frame(test$class, predict(model2, test))
+sum(predicting2$test.class == predicting2$predict.model2..test., na.rm = T)/ nrow(predicting2) * 100
+```
+
+
+### We can see that in the absence of hba1c, the importance of bmi and age increase for our model
+
+```{r}
+importance_model2 <- importance(model2)
+var_imporance_model_2 <- data.frame(Variables = row.names(importance_model2), importance = importance_model2[,"MeanDecreaseGini"])
+var_importance_model_2 <- var_imporance_model_2[order(-var_imporance_model_2$importance),]
+var_importance_model_2 [,1:2]
+```
+### By removing hba1c, the relative importance of everything else has increased
+```{r}
+ggplot(var_importance_model_2, aes(x = reorder(Variables, importance), y = importance, fill = importance)) + geom_bar(stat = "identity") + theme(axis.text.x =  element_text(angle = 22.5))
+```
+
+```{r}
+model_result <- data.frame(test$class, predict(model2, test[,1:11], type = "response"))
+```
+### Create a model that only uses bmi, age and gender as predictors
+
+```{r}
+model3 <- randomForest(class ~ ., data = train[,c(1,2,11,12)], ntree = 2001, replace= TRUE, mtry = 3, importance = TRUE)
+```
+The error rate for non-diabetic predictions once again increases,while the diabetic data is relatively unaffected. 
+```{r}
+plot(model3, ylim=c(0,0.36))
+legend('topright', colnames(model3$err.rate), col=1:3, fill=1:3)
+```
+### The estimate for error is about 7%. Even with just simple data such as bmi, age, and gender the model is still predicted to be extremely accurate
+```{r}
+model3
+```
+### BMI contains the bulk of the importance, followed by age, while gender is relatively unimportant.
+```{r}
+importance_model3 <- importance(model3)
+var_imporance_model_3 <- data.frame(Variables = row.names(importance_model3), importance = importance_model3[,"MeanDecreaseGini"])
+var_importance_model_3 <- var_imporance_model_3[order(-var_imporance_model_3$importance),]
+var_importance_model_3 [,1:2]
+```
+
+```{r}
+ggplot(var_importance_model_3, aes(x = reorder(Variables, importance), y = importance, fill = importance)) + geom_bar(stat = "identity") + theme(axis.text.x =  element_text(angle = 22.5))
+```
+
+
+
+### When using training data, the model still predicts with a 95% accuracy with just these variables 
+```{r}
+model_3_predict <- predict(model3, test)
+predicting3 <- data.frame(test$class, predict(model3, test))
+sum(predicting3$test.class == predicting3$predict.model3..test., na.rm = T)/ nrow(predicting2) * 100
+```
+## Issues
+
+### Clearly the data is not representative of the general population, and can't be generalized past this dataset. The data didn't include any data points of people that had higher bmis without having diabetes.
+
+## Conclusion
+
+### Further studies with early diagnosis could yield results, but models need to be trained on data that contains more negative results, if it is to be generalizeable. That being said, we can see that diabetes and bmi are closely tied to eachother. Further studies could look closer at the relationship between country diabetes rates and obesity rates.
+
+
+
+smote
+
+
+
+
+
+
+
+
+
+
+
